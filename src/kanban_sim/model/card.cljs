@@ -1,5 +1,4 @@
-(ns kanban-sim.model.card
-  (:require [clojure.pprint :as pprint]))
+(ns kanban-sim.model.card)
 
 (def cardStr "{
             \"Analysis\": 10,
@@ -121,7 +120,8 @@
 
 (defn done-stage [stage]
   (cond
-    (= stage "test") "deployed"
+    ;; (= stage "test") "deployed"
+    (= stage "test") "test-done" ;; to keep the symmetry of the board structure
     (= stage "development") "development-done"
     (= stage "analysis") "analysis-done"))
 
@@ -141,35 +141,11 @@
       (update worked-card :stage done-stage)
       worked-card)))
 
+(
+ comment
+ card
 
-;;
-;; pull using some strategy
-;;
-(defn remove-card [from-col]
-  ((first from-col) (rest from-col)))
+ (work card workers)
 
-(defn add-card [to-col card]
-  (conj to-col card))
-
-(defn pull-card [from-col to-col]
-  (let [[card, from-col-upd] (remove-card from-col)]
-    [from-col-upd (add-card to-col card)]))
-
-;; (defn pull [columns])
-
-(comment
-  card
-  (:stage card)
-
-  (def worked-card (work card workers))
-  worked-card
-
-  (work-completed? card)
-  (:stage worked-card)
-
-  (pull-card [] [])
-
-  (pprint/pp)
-  
-  ;
-  )
+ ;
+)
