@@ -155,7 +155,7 @@
   (let [[card, from-col-upd] (remove-card from-col)]
     [from-col-upd (add-card to-col card)]))
 
-(defn pull [columns])
+;; (defn pull [columns])
 
 (comment
   card
@@ -166,6 +166,8 @@
 
   (work-completed? card)
   (:stage worked-card)
+
+  (pull-card [] [])
 
   (pprint/pp)
   
