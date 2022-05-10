@@ -1,5 +1,6 @@
 (ns kanban-sim.model.board 
-  (:require [clojure.pprint :as pprint]))
+  (:require [clojure.pprint :as pprint]
+            [kanban-sim.model.card :refer [done?]]))
 
 
 ;;
@@ -19,10 +20,11 @@
 (defn wip [column]
   (count column))
 
+
 (defn pull-from-to [second-col first-col]
   (if (and (or (nil? (:wip first-col))
                (< (wip (:cards first-col)) (:wip first-col)))
-           (>  (count (:cards second-col)) 0))
+           (>  (count (filter done? (:cards second-col))) 0))
     (let [[from-upd to-upd] (pull-card (:cards second-col) (:cards first-col))]
       (pull-from-to (assoc second-col :cards from-upd) (assoc first-col :cards to-upd)))
     [second-col first-col]))

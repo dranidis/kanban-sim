@@ -1,4 +1,5 @@
-(ns kanban-sim.model.card)
+(ns kanban-sim.model.card 
+  (:require [clojure.string :as string]))
 
 (def cardStr "{
             \"Analysis\": 10,
@@ -141,11 +142,17 @@
       (update worked-card :stage done-stage)
       worked-card)))
 
+
+(defn done? [card]
+  (string/includes? (:stage card) "done"))
+
 (
  comment
  card
 
- (work card workers)
+ (def worked (work card workers))
+ (:stage worked)
 
+ (string/includes? (:stage worked) "done")
  ;
 )
