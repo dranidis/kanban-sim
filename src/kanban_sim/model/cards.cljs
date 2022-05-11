@@ -799,14 +799,14 @@
 (def all-cards-js (.parse js/JSON all-cards-str))
 (def all-cards (js->clj all-cards-js :keywordize-keys true))
 
+(defn cards->map [cards]
+  (reduce #(assoc %1 (:StoryId %2) %2) {} cards))
+
 (first all-cards)
 
 ;; make a map with StoryId as the key and the card as value
 (def indexed-cards (reduce #(assoc %1 (:StoryId %2) %2) {} all-cards))
 indexed-cards
-
-;; all values of the map in a vector
-(def all-values (reduce-kv #(conj %1 %3) [] indexed-cards))
 
 
 ;; TODO add done cards

@@ -68,9 +68,9 @@
 
 (defn specialty [developer]
   (cond
-    (= (:Role developer) "tester") :test
-    (= (:Role developer) "developer") :develop
-    (= (:Role developer) "analyst") :analysis
+    (= (:Role developer) "tester") "test"
+    (= (:Role developer) "developer") "development"
+    (= (:Role developer) "analyst") "analysis"
     ))
 
 (comment

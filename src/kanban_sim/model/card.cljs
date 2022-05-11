@@ -1,7 +1,7 @@
 (ns kanban-sim.model.card
   (:require clojure.pprint
-            [clojure.string :as string]
-            [kanban-sim.model.members :refer members]))
+            [clojure.string :as string]))
+
 
 (def cardStr "{
             \"Analysis\": 10,
@@ -74,17 +74,20 @@
 ;;
 ;; stage is updated but not the StoryOrder in the new stage
 ;;
-(defn work [card members]
-  (let [total (apply + (map #(roll-dice card %) members))
-        worked-card (update card (work-done (:stage card)) + total)]
-    (if (work-completed? worked-card)
-      (update worked-card :stage done-stage)
-      worked-card)))
+(defn work [card]
+  (if (:developers card)
+    (let [total (apply + (map #(roll-dice card %) (:developers card)))
+          worked-card (update card (work-done (:stage card)) + total)]
+      (dissoc
+       (if (work-completed? worked-card)
+         (update worked-card :stage done-stage)
+         worked-card)
+       :developers))
+    card))
 
 (defn done? [card]
   (and (not (nil? (:stage card)))
-       (not (nil? (#{"deck" "ready" "analysis-done" "development-done" "test-done"} (:stage card))))
-       ))
+       (not (nil? (#{"deck" "ready" "analysis-done" "development-done" "test-done" "deployed"} (:stage card))))))
 
 (defn next-stage [stage]
   (cond
@@ -92,18 +95,14 @@
     (= stage "development-done") "test"
     (= stage "analysis-done") "development"
     (= stage "ready") "analysis"
-    (= stage "deck") "ready"
-    ))
+    (= stage "deck") "ready"))
 
 (comment
   card
 
   (if (#{"deck" "ready" "analysis-done" "development-done" "test-done"} "reay") true false)
 
-  (def workers [(members 1) (members 5) (members 8)])
-
-
-  (def worked (work card workers))
+  (def worked (work card))
   (:stage worked)
 
   (string/includes? (:stage worked) "done")
