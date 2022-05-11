@@ -100,11 +100,17 @@
       cards)))
 
 
-(defn develop-cycle [developers cards]
+(defn update-day-deployed [day cards]
+  cards)
+
+
+
+(defn develop-cycle [developers cards day]
   (->> cards
        (assign developers)
        (map work)
-       pull-cards))
+       pull-cards
+       (update-day-deployed day)))
 
 (defn log-cards [cards]
   (print "LOG")
@@ -112,17 +118,19 @@
                       create-columns
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] [(:StoryId c) (:stage c) (done? c) (:developers c)])
+                             (fn [c] [(:Name c) (:stage c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
   (println)
   cards)
 
+(def start-day 11)
+
 (defn day [cards developers day-nr]
   (let [unfinished-cards (count (filter #(not (done? %)) cards))]
-    (when (and (< day-nr 50) (> unfinished-cards 0))
+    (when (and (< day-nr 10) (> unfinished-cards 0))
       (println "DAY" day-nr)
       (log-cards cards)
-      (day (develop-cycle developers cards) developers (inc day-nr)))))
+      (day (develop-cycle developers cards (+ day-nr start-day)) developers (inc day-nr)))))
 
 (comment
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
