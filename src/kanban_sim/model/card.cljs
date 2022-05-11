@@ -107,6 +107,6 @@
 
   (string/includes? (:stage worked) "done")
   (done? 1)
-  (done? {:stage "ready"})
+  (done? {:stage "deployed"})
  ;
   )

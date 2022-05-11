@@ -117,6 +117,13 @@
   (println)
   cards)
 
+(defn day [cards developers day-nr]
+  (let [unfinished-cards (count (filter #(not (done? %)) cards))]
+    (when (and (< day-nr 50) (> unfinished-cards 0))
+      (println "DAY" day-nr)
+      (log-cards cards)
+      (day (develop-cycle developers cards) developers (inc day-nr)))))
+
 (comment
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
        all-cards)
@@ -130,7 +137,15 @@
 
 ;; -----------------
 
+  (day all-cards developers 0)
+
   (->> all-cards
+       log-cards
+
+       (develop-cycle developers)
+       log-cards
+
+       (develop-cycle developers)
        log-cards
 
        (develop-cycle developers)
