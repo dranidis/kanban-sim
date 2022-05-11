@@ -1,5 +1,7 @@
-(ns kanban-sim.model.card 
-  (:require [clojure.string :as string]))
+(ns kanban-sim.model.card
+  (:require clojure.pprint
+            [clojure.string :as string]
+            [kanban-sim.model.members :refer members]))
 
 (def cardStr "{
             \"Analysis\": 10,
@@ -25,71 +27,8 @@
         }")
 
 
-(def members-str "[
-        {
-            \"Active\": false,
-            \"Role\": \"analyst\",
-            \"StoryId\": null,
-            \"TeamMemberId\": 1
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"analyst\",
-            \"StoryId\": 103,
-            \"TeamMemberId\": 2
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"analyst\",
-            \"StoryId\": 103,
-            \"TeamMemberId\": 3
-        },
-        {
-            \"Active\": false,
-            \"Role\": \"developer\",
-            \"StoryId\": null,
-            \"TeamMemberId\": 4
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"developer\",
-            \"StoryId\": 102,
-            \"TeamMemberId\": 5
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"developer\",
-            \"StoryId\": 102,
-            \"TeamMemberId\": 6
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"tester\",
-            \"StoryId\": 106,
-            \"TeamMemberId\": 7
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"tester\",
-            \"StoryId\": null,
-            \"TeamMemberId\": 8
-        },
-        {
-            \"Active\": true,
-            \"Role\": \"tester\",
-            \"StoryId\": null,
-            \"TeamMemberId\": 9
-        }
-    ]")
-
 (def card-js (.parse js/JSON cardStr))
 (def card (js->clj card-js :keywordize-keys true))
-
-(def member-js (.parse js/JSON members-str))
-(def members (js->clj member-js :keywordize-keys true))
-
-(def workers [(members 1) (members 5) (members 8)])
-
 
 
 
@@ -142,17 +81,33 @@
       (update worked-card :stage done-stage)
       worked-card)))
 
-
 (defn done? [card]
-  (string/includes? (:stage card) "done"))
+  (and (not (nil? (:stage card)))
+       (not (nil? (#{"deck" "ready" "analysis-done" "development-done" "test-done"} (:stage card))))
+       ))
 
-(
- comment
- card
+(defn next-stage [stage]
+  (cond
+    (= stage "test-done") "deployed"
+    (= stage "development-done") "test"
+    (= stage "analysis-done") "development"
+    (= stage "ready") "analysis"
+    (= stage "deck") "ready"
+    ))
 
- (def worked (work card workers))
- (:stage worked)
+(comment
+  card
 
- (string/includes? (:stage worked) "done")
+  (if (#{"deck" "ready" "analysis-done" "development-done" "test-done"} "reay") true false)
+
+  (def workers [(members 1) (members 5) (members 8)])
+
+
+  (def worked (work card workers))
+  (:stage worked)
+
+  (string/includes? (:stage worked) "done")
+  (done? 1)
+  (done? {:stage "ready"})
  ;
-)
+  )
