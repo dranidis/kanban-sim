@@ -64,20 +64,26 @@
   cards)
 
 (def start-day 9)
-(def financial {:subs 0})
+(def financial {:subs 0 :revenue 0})
 
-(defn update-subscribers [day financial card]
-  (if (and (= (:stage card) "deployed") 
+(defn update-subscribers [day subs card]
+  (if (and (= (:stage card) "deployed")
            (< (- day (:DayDeployed card)) 3))
-    (update financial :subs + (:Value card))
-    financial))
+    (+ subs (:Value card))
+    subs))
 
-(defn billing-cycle [day financial cards]
-  (reduce (partial update-subscribers day) financial cards))
+(defn billing-cycle-subs [day cards]
+  (reduce (partial update-subscribers day) 0 cards))
 
 (defn update-financial [day financial cards]
   (if (zero? (rem day 3))
-    (billing-cycle day financial cards)
+    (let [new-subs (billing-cycle-subs day cards)
+          _ (println "New subs: " new-subs)
+          total-subs (+ (:subs financial) new-subs)
+          total-revenue (+ (:revenue financial) (* total-subs 100))]
+      (-> financial
+          (assoc :subs total-subs)
+          (assoc :revenue total-revenue)))
     financial))
 
 (defn start-sim [day-nr financial developers cards]
@@ -101,6 +107,8 @@
 
 
 ;; -----------------
+
+  developers
 
   (start-sim start-day financial developers all-cards)
 
