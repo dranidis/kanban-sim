@@ -99,13 +99,22 @@
       (assign devs (assign-developer developer cards))
       cards)))
 
+(defn update-card-day-ready [day card]
+  (if (and (= (:stage card) "ready")
+           (= (:DayReady card) 0))
+    (assoc card :DayReady day)
+    card))
+
+(defn update-card-day-deployed [day card]
+  (if (and (= (:stage card) "deployed")
+           (= (:DayDeployed card) 0))
+    (assoc card :DayDeployed day)
+    card))
 
 (defn update-day-deployed [day cards]
-  cards)
+  (map #(update-card-day-ready day (update-card-day-deployed day %)) cards))
 
-
-
-(defn develop-cycle [developers cards day]
+(defn develop-cycle [day developers cards]
   (->> cards
        (assign developers)
        (map work)
@@ -118,19 +127,19 @@
                       create-columns
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] [(:Name c) (:stage c) (:DayDeployed c) (done? c) (:developers c)])
+                             (fn [c] [(:Name c) (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
   (println)
   cards)
 
-(def start-day 11)
+(def start-day 9)
 
-(defn day [cards developers day-nr]
+(defn day [day-nr developers cards]
   (let [unfinished-cards (count (filter #(not (done? %)) cards))]
-    (when (and (< day-nr 10) (> unfinished-cards 0))
-      (println "DAY" day-nr)
+    (when (and (< day-nr 23) (> unfinished-cards 0))
+      (println "AT BEGINNING OF DAY" day-nr)
       (log-cards cards)
-      (day (develop-cycle developers cards (+ day-nr start-day)) developers (inc day-nr)))))
+      (day (inc day-nr) developers (develop-cycle day-nr developers cards)))))
 
 (comment
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
@@ -145,18 +154,18 @@
 
 ;; -----------------
 
-  (day all-cards developers 0)
+  (day start-day developers all-cards)
 
   (->> all-cards
        log-cards
 
-       (develop-cycle developers)
+       (develop-cycle 11 developers)
        log-cards
 
-       (develop-cycle developers)
+       (develop-cycle 12 developers)
        log-cards
 
-       (develop-cycle developers)
+       (develop-cycle 13 developers)
        log-cards
 
        create-columns
@@ -169,3 +178,4 @@
   (pprint/pp)
   ;
   )
+
