@@ -74,7 +74,7 @@
 ;;
 ;; stage is updated but not the StoryOrder in the new stage
 ;;
-(defn work [card]
+(defn work-on-card [card]
   (if (:developers card)
     (let [total (apply + (map #(roll-dice card %) (:developers card)))
           worked-card (update card (work-done (:stage card)) + total)]
@@ -102,7 +102,7 @@
 
   (if (#{"deck" "ready" "analysis-done" "development-done" "test-done"} "reay") true false)
 
-  (def worked (work card))
+  (def worked (work-on-card card))
   (:stage worked)
 
   (string/includes? (:stage worked) "done")
