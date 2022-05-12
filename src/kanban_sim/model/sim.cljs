@@ -89,9 +89,12 @@
 (defn start-sim [day-nr financial developers cards]
   (let [unfinished-cards (count (filter #(not (done? %)) cards))]
     (when (and (< day-nr 23) (> unfinished-cards 0))
-      (println "AT BEGINNING OF DAY" day-nr)
-      (log-cards cards)
-      (println financial)
+      
+      (when (= day-nr 22)
+        (println "AT BEGINNING OF DAY" day-nr)
+      ;; (log-cards cards)
+        (println financial))
+
       (let [worked-cards (develop-cycle day-nr developers cards)]
         (start-sim (inc day-nr) (update-financial day-nr financial worked-cards) developers worked-cards)))))
 
