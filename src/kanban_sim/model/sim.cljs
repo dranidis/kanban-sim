@@ -1,4 +1,4 @@
-(ns kanban-sim.model.sim 
+(ns kanban-sim.model.sim
   (:require [cljs.pprint :as pprint]
             [kanban-sim.model.board :refer [create-columns pull-cards]]
             [kanban-sim.model.card :refer [done? work-on-card]]
@@ -42,7 +42,7 @@
     (assoc card :DayDeployed day)
     card))
 
-(defn update-day-deployed [day cards]
+(defn update-days [day cards]
   (map #(update-card-day-ready day (update-card-day-deployed day %)) cards))
 
 (defn develop-cycle [day developers cards]
@@ -50,7 +50,7 @@
        (assign developers)
        (map work-on-card)
        pull-cards
-       (update-day-deployed day)))
+       (update-days day)))
 
 (defn log-cards [cards]
   (print "LOG")
@@ -58,19 +58,36 @@
                       create-columns
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] [(:Name c) (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
+                             (fn [c] [(:Name c) (:Value c) (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
   (println)
   cards)
 
 (def start-day 9)
+(def financial {:subs 0})
 
-(defn day [day-nr developers cards]
+(defn update-subscribers [day financial card]
+  (if (and (= (:stage card) "deployed") 
+           (< (- day (:DayDeployed card)) 3))
+    (update financial :subs + (:Value card))
+    financial))
+
+(defn billing-cycle [day financial cards]
+  (reduce (partial update-subscribers day) financial cards))
+
+(defn update-financial [day financial cards]
+  (if (zero? (rem day 3))
+    (billing-cycle day financial cards)
+    financial))
+
+(defn start-sim [day-nr financial developers cards]
   (let [unfinished-cards (count (filter #(not (done? %)) cards))]
     (when (and (< day-nr 23) (> unfinished-cards 0))
       (println "AT BEGINNING OF DAY" day-nr)
       (log-cards cards)
-      (day (inc day-nr) developers (develop-cycle day-nr developers cards)))))
+      (println financial)
+      (let [worked-cards (develop-cycle day-nr developers cards)]
+        (start-sim (inc day-nr) (update-financial day-nr financial worked-cards) developers worked-cards)))))
 
 (comment
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
@@ -85,7 +102,7 @@
 
 ;; -----------------
 
-  (day start-day developers all-cards)
+  (start-sim start-day financial developers all-cards)
 
   (->> all-cards
        log-cards
