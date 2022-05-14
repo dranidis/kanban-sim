@@ -1,9 +1,12 @@
 (ns kanban-sim.model.sim
   (:require [cljs.pprint :as pprint]
+            [clojure.string :as string]
             [kanban-sim.model.board :refer [create-columns pull-cards]]
             [kanban-sim.model.card :refer [done? work-on-card]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
-            [kanban-sim.model.members :refer [developers specialty]]))
+            [kanban-sim.model.members :refer [developers specialty]]
+            [kixi.stats.core :refer [standard-deviation mean]]
+            [redux.core :refer [fuse]]))
 
 ;;
 ;; assign each developer to a random card in their specialty
@@ -61,7 +64,7 @@
                              (fn [c] [(:Name c) (:Value c) (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
   (println)
-  cards)
+  nil)
 
 (def start-day 9)
 (def financial {:subs 0 :revenue 0})
@@ -78,7 +81,7 @@
 (defn update-financial [day financial cards]
   (if (zero? (rem day 3))
     (let [new-subs (billing-cycle-subs day cards)
-          _ (println "New subs: " new-subs)
+          ;; _ (println "New subs: " new-subs)
           total-subs (+ (:subs financial) new-subs)
           total-revenue (+ (:revenue financial) (* total-subs 100))]
       (-> financial
@@ -88,19 +91,26 @@
 
 (defn start-sim [day-nr financial developers cards]
   (let [unfinished-cards (count (filter #(not (done? %)) cards))]
-    (when (and (< day-nr 23) (> unfinished-cards 0))
-      
-      (when (= day-nr 22)
-        (println "AT BEGINNING OF DAY" day-nr)
-      ;; (log-cards cards)
-        (println financial))
-
-      (let [worked-cards (develop-cycle day-nr developers cards)]
-        (start-sim (inc day-nr) (update-financial day-nr financial worked-cards) developers worked-cards)))))
+    (if (and (< day-nr 23) (> unfinished-cards 0))
+      (let [;; _ (println "Start")
+            worked-cards (develop-cycle day-nr developers cards)]
+        ;; (when (= day-nr 22)
+        ;;   (println "AT BEGINNING OF DAY" day-nr)
+        ;;   (log-cards cards)
+        ;;   (println financial)
+        (start-sim (inc day-nr) (update-financial day-nr financial worked-cards) developers worked-cards))
+      ;; (
+      ;;  let [_ (log-cards cards)
+      ;;       ]
+      ;;   (println "DECK " (map :Name (filter #(= (:stage %) "deck") cards))))
+      financial
+      ;; )
+      )))
 
 (comment
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
        all-cards)
+
 
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
        (assign-developer (nth developers 0) all-cards))
@@ -113,7 +123,27 @@
 
   developers
 
+
+  (filter #(= (:Name %) "E1") all-cards)
+
+  (def stories-only (->> all-cards
+                         (filter #(string/includes? (:Name %) "S"))
+                         pull-cards))
+
+
+  (->> stories-only log-cards)
+
+  financial
   (start-sim start-day financial developers all-cards)
+  (start-sim start-day financial developers stories-only)
+
+  ;; statistics
+
+  (->> (map (fn [n] (:revenue (start-sim start-day financial developers stories-only))) (range 100))
+       (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max})))
+
+
+  ; -----------------------------
 
   (->> all-cards
        log-cards
@@ -137,4 +167,5 @@
   (pprint/pp)
   ;
   )
+
 
