@@ -1,4 +1,4 @@
-(ns kanban-sim.model.policies 
+(ns kanban-sim.model.policies
   (:require [kanban-sim.model.card :refer [estimate-work-left]]
             [kanban-sim.model.members :refer [specialty]]))
 
@@ -12,7 +12,7 @@
 ;; assign each developer to a random card 
 ;; first looks in their specialty
 ;;
-(defn find-random-card-to-work [developer cards]
+(defn select-random-card-to-work [developer cards]
   (let [specialty-cards (specialty-cards developer cards)]
     (rand-nth (if (> (count specialty-cards) 0)
                 specialty-cards
@@ -22,7 +22,7 @@
 ;; assign each developer to the card with the most estimated work left
 ;; first in their specialty
 ;;
-(defn find-card-with-more-work [developer cards]
+(defn select-card-with-more-work [developer cards]
   (let [specialty-cards (specialty-cards developer cards)]
     (first (sort
             (fn [c1 c2] (> (:estimated-work-left c1)

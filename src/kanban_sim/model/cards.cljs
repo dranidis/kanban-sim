@@ -1,4 +1,4 @@
-(ns kanban-sim.model.cards 
+(ns kanban-sim.model.cards
   (:require clojure.pprint))
 
 (def all-cards-str "[

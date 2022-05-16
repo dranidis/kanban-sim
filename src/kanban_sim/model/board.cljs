@@ -1,8 +1,6 @@
 (ns kanban-sim.model.board
-  (:require [clojure.pprint :as pprint]
-            [kanban-sim.model.card :refer [done? next-stage work-on-card]]
-            [kanban-sim.model.cards :refer [all-cards cards->map filter-stage]]
-            [kanban-sim.model.members :refer [developers specialty]]))
+  (:require [kanban-sim.model.card :refer [done? next-stage]]
+            [kanban-sim.model.cards :refer [filter-stage]]))
 
 
 ;;

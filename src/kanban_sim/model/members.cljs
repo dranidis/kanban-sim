@@ -1,4 +1,4 @@
-(ns kanban-sim.model.members 
+(ns kanban-sim.model.members
   (:require clojure.pprint))
 
 
@@ -70,8 +70,7 @@
   (cond
     (= (:Role developer) "tester") "test"
     (= (:Role developer) "developer") "development"
-    (= (:Role developer) "analyst") "analysis"
-    ))
+    (= (:Role developer) "analyst") "analysis"))
 
 (comment
   (filter #(:Active %) members)

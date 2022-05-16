@@ -6,8 +6,8 @@
                                            work-on-card work-to-do]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
             [kanban-sim.model.members :refer [developers]]
-            [kanban-sim.model.policies :refer [find-card-with-more-work
-                                               find-random-card-to-work]]
+            [kanban-sim.model.policies :refer [select-card-with-more-work
+                                               select-random-card-to-work]]
             [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
 
@@ -123,10 +123,10 @@
 
 
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
-       (assign-developer {:select-card-to-work find-card-with-more-work} (nth developers 0) all-cards))
+       (assign-developer {:select-card-to-work select-card-with-more-work} (nth developers 0) all-cards))
 
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
-       (assign {:select-card-to-work find-card-with-more-work} developers all-cards))
+       (assign {:select-card-to-work select-card-with-more-work} developers all-cards))
 
 
 ;; -----------------
@@ -143,43 +143,43 @@
 
   financial
   (start-sim
-   {:select-card-to-work find-card-with-more-work}
+   {:select-card-to-work select-card-with-more-work}
    start-day financial developers all-cards)
 
   (start-sim
-   {:select-card-to-work find-card-with-more-work}
+   {:select-card-to-work select-card-with-more-work}
    start-day financial developers stories-only)
 
   ;; statistics
 
-  (time (->> (map (fn [n] (:revenue (start-sim
-                                     {:select-card-to-work find-random-card-to-work}
+  (time (->> (map (fn [_] (:revenue (start-sim
+                                     {:select-card-to-work select-random-card-to-work}
                                      start-day financial developers stories-only))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
-  (time (->> (map (fn [n] (:revenue (start-sim
-                                     {:select-card-to-work find-card-with-more-work}
+  (time (->> (map (fn [_] (:revenue (start-sim
+                                     {:select-card-to-work select-card-with-more-work}
                                      start-day financial developers stories-only))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   ; -----------------------------
 
-  (find-card-with-more-work (first developers) [(first stories-only)])
+  (select-card-with-more-work (first developers) [(first stories-only)])
   (first developers) ; analyst
 
 
   (->> stories-only
        log-cards
-       (find-card-with-more-work (first developers)))
+       (select-card-with-more-work (first developers)))
 
   (filter #(= (:stage %) "analysis") stories-only)
 
   (->> stories-only
        log-cards
 
-       (develop-cycle {:select-card-to-work find-card-with-more-work} 11 developers)
+       (develop-cycle {:select-card-to-work select-card-with-more-work} 11 developers)
        log-cards
 
       ;;  (develop-cycle 12 developers)
@@ -197,9 +197,9 @@
 
   (->> stories-only
        log-cards
-       (assign {:select-card-to-work find-card-with-more-work} developers)
+       (assign {:select-card-to-work select-card-with-more-work} developers)
        log-cards
-       ((fn [cars] nil)))
+       ((fn [_] nil)))
 
 
   (pprint/pp)
