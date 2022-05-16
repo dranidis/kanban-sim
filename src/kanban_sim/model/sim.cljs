@@ -8,9 +8,7 @@
             [kixi.stats.core :refer [standard-deviation mean]]
             [redux.core :refer [fuse]]))
 
-;;
-;; assign each developer to a random card in their specialty
-;;
+
 
 (defn assign-to-card [card developer]
   (let [developers (:developers card)]
@@ -18,14 +16,22 @@
       (update card :developers conj developer)
       (assoc card :developers [developer]))))
 
+
+;;
+;; assign each developer to a random card 
+;; first looks in their specialty
+;;
+(defn find-random-card-to-work [developer cards]
+  (let [specialty-cards (filter #(= (:stage %) (specialty developer)) cards)]
+    (rand-nth (if (> (count specialty-cards) 0)
+                specialty-cards
+                (filter #(not= (:stage %) (specialty developer)) cards)))))
+
 (defn assign-developer [developer cards]
   (let [cards-map (cards->map cards)
-        specialty-cards (filter #(= (:stage %) (specialty developer)) cards)]
-    (if (> (count specialty-cards) 0)
-      (let [random-story-id (:StoryId (rand-nth specialty-cards))
-            assigned-card (assign-to-card (cards-map random-story-id) developer)]
-        (into [] (vals (assoc cards-map random-story-id assigned-card))))
-      cards)))
+        story-id (:StoryId (find-random-card-to-work developer cards))
+        assigned-card (assign-to-card (cards-map story-id) developer)]
+    (into [] (vals (assoc cards-map story-id assigned-card)))))
 
 (defn assign [developers cards]
   (let [[developer & devs] developers]
@@ -64,7 +70,7 @@
                              (fn [c] [(:Name c) (:Value c) (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
   (println)
-  nil)
+  cards)
 
 (def start-day 9)
 (def financial {:subs 0 :revenue 0})
@@ -124,7 +130,7 @@
   developers
 
 
-  (filter #(= (:Name %) "E1") all-cards)
+  (filter #(= (:Name %) "S1") all-cards)
 
   (def stories-only (->> all-cards
                          (filter #(string/includes? (:Name %) "S"))
@@ -139,23 +145,23 @@
 
   ;; statistics
 
-  (->> (map (fn [n] (:revenue (start-sim start-day financial developers stories-only))) (range 100))
-       (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max})))
+  (time (->> (map (fn [n] (:revenue (start-sim start-day financial developers stories-only))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   ; -----------------------------
 
-  (->> all-cards
+  (->> stories-only
        log-cards
 
        (develop-cycle 11 developers)
        log-cards
 
-       (develop-cycle 12 developers)
-       log-cards
+      ;;  (develop-cycle 12 developers)
+      ;;  log-cards
 
-       (develop-cycle 13 developers)
-       log-cards
+      ;;  (develop-cycle 13 developers)
+      ;;  log-cards
 
        create-columns
        (filter #(not= (:label %) :deck))
