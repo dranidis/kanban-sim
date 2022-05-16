@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [kanban-sim.model.board :refer [create-columns pull-cards]]
             [kanban-sim.model.card :refer [done? estimate-work-left
-                                           work-on-card]]
+                                           work-on-card work-to-do]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
             [kanban-sim.model.members :refer [developers specialty]]
             [kixi.stats.core :refer [mean standard-deviation]]
@@ -87,7 +87,9 @@
                       create-columns
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] [(:Name c) (:Value c) (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
+                             (fn [c] [(:Name c) "DO" (work-to-do c) 
+                                      "EST" (:estimated-work-left (estimate-work-left c))
+                                      (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
   (println)
   cards)
@@ -176,6 +178,8 @@
 
   (find-card-with-more-work (first developers) [(first stories-only)])
   (first developers) ; analyst
+
+
   (->> stories-only
        log-cards
        (find-card-with-more-work (first developers)))
@@ -199,10 +203,18 @@
        (map #(map
               (fn [c] [(:StoryId c) (:stage c) (done? c) (:developers c)])
               (:cards %))))
+  
+
+  (->> stories-only
+       log-cards
+       (assign developers)
+       log-cards
+       ((fn [cars] nil)))
 
 
   (pprint/pp)
   ;
   )
+
 
 

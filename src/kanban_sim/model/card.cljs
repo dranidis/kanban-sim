@@ -65,22 +65,27 @@
     (= stage "development") "development-done"
     (= stage "analysis") "analysis-done"))
 
-(defn work-completed? [card]
+(defn work-to-do [card]
   (cond
-    (testing? card) (>= (:TestDone card) (:Test card))
-    (developing? card) (>= (:DevelopmentDone card) (:Development card))
-    (analysing? card) (>= (:AnalysisDone card) (:Analysis card))))
+    (testing? card) (- (:Test card) (:TestDone card))
+    (developing? card) (- (:Development card) (:DevelopmentDone card))
+    (analysing? card) (- (:Analysis card) (:AnalysisDone card))))
+
+(defn work-completed? [card]
+  (<= (work-to-do card) 0))
 
 ;;
 ;; stage is updated but not the StoryOrder in the new stage
 ;;
 
+
 (defn estimate-work-left [card]
-  (assoc card :estimated-work-left 
-         (cond
-           (testing? card) (:Test card)
-           (developing? card) (:Development card)
-           (analysing? card) (:Analysis card))))
+  (assoc card :estimated-work-left
+         (if (:developers card)
+           (let [expected-dice 3.5
+                 expected-work (apply + (map #(amount-of-work card % expected-dice) (:developers card)))]
+             (- (work-to-do card) expected-work))
+           (work-to-do card))))
 
 (defn work-on-card [card]
   (if (:developers card)
@@ -123,8 +128,8 @@
   (map estimate-work-left all-cards)
 
   (take 3 (sort
-            (fn [c1 c2] (> (:estimated-work-left c1)
-                           (:estimated-work-left c2))) 
-   (map estimate-work-left all-cards)))
+           (fn [c1 c2] (> (:estimated-work-left c1)
+                          (:estimated-work-left c2)))
+           (map estimate-work-left all-cards)))
  ;
   )
