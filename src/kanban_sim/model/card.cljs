@@ -1,6 +1,7 @@
 (ns kanban-sim.model.card
   (:require clojure.pprint
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [kanban-sim.model.cards :refer [all-cards]]))
 
 
 (def cardStr "{
@@ -73,6 +74,14 @@
 ;;
 ;; stage is updated but not the StoryOrder in the new stage
 ;;
+
+(defn estimate-work-left [card]
+  (assoc card :estimated-work-left 
+         (cond
+           (testing? card) (:Test card)
+           (developing? card) (:Development card)
+           (analysing? card) (:Analysis card))))
+
 (defn work-on-card [card]
   (if (:developers card)
     (let [total-work (apply + (map #(amount-of-work card % (inc (rand-int 6))) (:developers card)))
@@ -96,6 +105,8 @@
     (= stage "ready") "analysis"
     (= stage "deck") "ready"))
 
+
+
 (comment
   card
 
@@ -107,5 +118,13 @@
   (string/includes? (:stage worked) "done")
   (done? 1)
   (done? {:stage "deployed"})
+
+  (map :stage all-cards)
+  (map estimate-work-left all-cards)
+
+  (take 3 (sort
+            (fn [c1 c2] (> (:estimated-work-left c1)
+                           (:estimated-work-left c2))) 
+   (map estimate-work-left all-cards)))
  ;
   )

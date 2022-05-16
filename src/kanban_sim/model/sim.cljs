@@ -2,10 +2,11 @@
   (:require [cljs.pprint :as pprint]
             [clojure.string :as string]
             [kanban-sim.model.board :refer [create-columns pull-cards]]
-            [kanban-sim.model.card :refer [done? work-on-card]]
+            [kanban-sim.model.card :refer [done? estimate-work-left
+                                           work-on-card]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
             [kanban-sim.model.members :refer [developers specialty]]
-            [kixi.stats.core :refer [standard-deviation mean]]
+            [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
 
 
@@ -17,19 +18,38 @@
       (assoc card :developers [developer]))))
 
 
+(defn specialty-cards [developer cards]
+  (filter #(= (:stage %) (specialty developer)) cards))
+
+(defn non-specialty-cards [developer cards]
+  (filter #(not= (:stage %) (specialty developer)) cards))
 ;;
 ;; assign each developer to a random card 
 ;; first looks in their specialty
 ;;
 (defn find-random-card-to-work [developer cards]
-  (let [specialty-cards (filter #(= (:stage %) (specialty developer)) cards)]
+  (let [specialty-cards (specialty-cards developer cards)]
     (rand-nth (if (> (count specialty-cards) 0)
                 specialty-cards
-                (filter #(not= (:stage %) (specialty developer)) cards)))))
+                (non-specialty-cards developer cards)))))
 
+;;
+;; assign each developer to the card with the most estimated work left
+;; first in their specialty
+;;
+(defn find-card-with-more-work [developer cards]
+  (let [specialty-cards (specialty-cards developer cards)]
+    (first (sort
+            (fn [c1 c2] (> (:estimated-work-left c1)
+                           (:estimated-work-left c2)))
+            (map estimate-work-left (if (> (count specialty-cards) 0)
+                                      specialty-cards
+                                      (non-specialty-cards developer cards)))))))
+;;
 (defn assign-developer [developer cards]
   (let [cards-map (cards->map cards)
-        story-id (:StoryId (find-random-card-to-work developer cards))
+        ;; story-id (:StoryId (find-random-card-to-work developer cards))
+        story-id (:StoryId (find-card-with-more-work developer cards))
         assigned-card (assign-to-card (cards-map story-id) developer)]
     (into [] (vals (assoc cards-map story-id assigned-card)))))
 
@@ -113,6 +133,11 @@
       ;; )
       )))
 
+(def stories-only (->> all-cards
+                       (filter #(string/includes? (:Name %) "S"))
+                       pull-cards))
+
+
 (comment
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
        all-cards)
@@ -130,11 +155,9 @@
   developers
 
 
+
   (filter #(= (:Name %) "S1") all-cards)
 
-  (def stories-only (->> all-cards
-                         (filter #(string/includes? (:Name %) "S"))
-                         pull-cards))
 
 
   (->> stories-only log-cards)
@@ -150,6 +173,14 @@
 
 
   ; -----------------------------
+
+  (find-card-with-more-work (first developers) [(first stories-only)])
+  (first developers) ; analyst
+  (->> stories-only
+       log-cards
+       (find-card-with-more-work (first developers)))
+
+  (filter #(= (:stage %) "analysis" ) stories-only)
 
   (->> stories-only
        log-cards
