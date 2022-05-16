@@ -5,7 +5,9 @@
             [kanban-sim.model.card :refer [done? estimate-work-left
                                            work-on-card work-to-do]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
-            [kanban-sim.model.members :refer [developers specialty]]
+            [kanban-sim.model.members :refer [developers]]
+            [kanban-sim.model.policies :refer [find-card-with-more-work
+                                               find-random-card-to-work]]
             [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
 
@@ -18,45 +20,20 @@
       (assoc card :developers [developer]))))
 
 
-(defn specialty-cards [developer cards]
-  (filter #(= (:stage %) (specialty developer)) cards))
-
-(defn non-specialty-cards [developer cards]
-  (filter #(not= (:stage %) (specialty developer)) cards))
-;;
-;; assign each developer to a random card 
-;; first looks in their specialty
-;;
-(defn find-random-card-to-work [developer cards]
-  (let [specialty-cards (specialty-cards developer cards)]
-    (rand-nth (if (> (count specialty-cards) 0)
-                specialty-cards
-                (non-specialty-cards developer cards)))))
 
 ;;
-;; assign each developer to the card with the most estimated work left
-;; first in their specialty
-;;
-(defn find-card-with-more-work [developer cards]
-  (let [specialty-cards (specialty-cards developer cards)]
-    (first (sort
-            (fn [c1 c2] (> (:estimated-work-left c1)
-                           (:estimated-work-left c2)))
-            (map estimate-work-left (if (> (count specialty-cards) 0)
-                                      specialty-cards
-                                      (non-specialty-cards developer cards)))))))
-;;
-(defn assign-developer [developer cards]
+(defn assign-developer [policy developer cards]
   (let [cards-map (cards->map cards)
         ;; story-id (:StoryId (find-random-card-to-work developer cards))
-        story-id (:StoryId (find-card-with-more-work developer cards))
+        ;; story-id (:StoryId (find-card-with-more-work developer cards))
+        story-id (:StoryId ((:select-card-to-work policy) developer cards))
         assigned-card (assign-to-card (cards-map story-id) developer)]
     (into [] (vals (assoc cards-map story-id assigned-card)))))
 
-(defn assign [developers cards]
+(defn assign [policy developers cards]
   (let [[developer & devs] developers]
     (if developer
-      (assign devs (assign-developer developer cards))
+      (assign policy devs (assign-developer policy developer cards))
       cards)))
 
 (defn update-card-day-ready [day card]
@@ -74,9 +51,9 @@
 (defn update-days [day cards]
   (map #(update-card-day-ready day (update-card-day-deployed day %)) cards))
 
-(defn develop-cycle [day developers cards]
+(defn develop-cycle [policy day developers cards]
   (->> cards
-       (assign developers)
+       (assign policy developers)
        (map work-on-card)
        pull-cards
        (update-days day)))
@@ -87,7 +64,7 @@
                       create-columns
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] [(:Name c) "DO" (work-to-do c) 
+                             (fn [c] [(:Name c) "DO" (work-to-do c)
                                       "EST" (:estimated-work-left (estimate-work-left c))
                                       (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
                              (:cards %)))))
@@ -117,16 +94,16 @@
           (assoc :revenue total-revenue)))
     financial))
 
-(defn start-sim [day-nr financial developers cards]
+(defn start-sim [policy day-nr financial developers cards]
   (let [unfinished-cards (count (filter #(not (done? %)) cards))]
     (if (and (< day-nr 23) (> unfinished-cards 0))
       (let [;; _ (println "Start")
-            worked-cards (develop-cycle day-nr developers cards)]
+            worked-cards (develop-cycle policy day-nr developers cards)]
         ;; (when (= day-nr 22)
         ;;   (println "AT BEGINNING OF DAY" day-nr)
         ;;   (log-cards cards)
         ;;   (println financial)
-        (start-sim (inc day-nr) (update-financial day-nr financial worked-cards) developers worked-cards))
+        (start-sim policy (inc day-nr) (update-financial day-nr financial worked-cards) developers worked-cards))
       ;; (
       ;;  let [_ (log-cards cards)
       ;;       ]
@@ -146,10 +123,10 @@
 
 
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
-       (assign-developer (nth developers 0) all-cards))
+       (assign-developer {:select-card-to-work find-card-with-more-work} (nth developers 0) all-cards))
 
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
-       (assign developers all-cards))
+       (assign {:select-card-to-work find-card-with-more-work} developers all-cards))
 
 
 ;; -----------------
@@ -165,12 +142,25 @@
   (->> stories-only log-cards)
 
   financial
-  (start-sim start-day financial developers all-cards)
-  (start-sim start-day financial developers stories-only)
+  (start-sim
+   {:select-card-to-work find-card-with-more-work}
+   start-day financial developers all-cards)
+
+  (start-sim
+   {:select-card-to-work find-card-with-more-work}
+   start-day financial developers stories-only)
 
   ;; statistics
 
-  (time (->> (map (fn [n] (:revenue (start-sim start-day financial developers stories-only))) (range 100))
+  (time (->> (map (fn [n] (:revenue (start-sim
+                                     {:select-card-to-work find-random-card-to-work}
+                                     start-day financial developers stories-only))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+
+  (time (->> (map (fn [n] (:revenue (start-sim
+                                     {:select-card-to-work find-card-with-more-work}
+                                     start-day financial developers stories-only))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
@@ -184,12 +174,12 @@
        log-cards
        (find-card-with-more-work (first developers)))
 
-  (filter #(= (:stage %) "analysis" ) stories-only)
+  (filter #(= (:stage %) "analysis") stories-only)
 
   (->> stories-only
        log-cards
 
-       (develop-cycle 11 developers)
+       (develop-cycle {:select-card-to-work find-card-with-more-work} 11 developers)
        log-cards
 
       ;;  (develop-cycle 12 developers)
@@ -203,11 +193,11 @@
        (map #(map
               (fn [c] [(:StoryId c) (:stage c) (done? c) (:developers c)])
               (:cards %))))
-  
+
 
   (->> stories-only
        log-cards
-       (assign developers)
+       (assign {:select-card-to-work find-card-with-more-work} developers)
        log-cards
        ((fn [cars] nil)))
 
