@@ -41,16 +41,15 @@
 (defn analysing? [card]
   (= "analysis" (:stage card)))
 
-(defn roll-dice [card member]
-  (let [dice (inc (rand-int 6))]
-    (cond
-      (and (testing? card)
-           (= "tester" (:Role member))) (* 2 dice)
-      (and (developing? card)
-           (= "developer" (:Role member))) (* 2 dice)
-      (and (analysing? card)
-           (= "analyst" (:Role member))) (* 2 dice)
-      :else dice)))
+(defn amount-of-work [card member dice]
+  (cond
+    (and (testing? card)
+         (= "tester" (:Role member))) (* 2 dice)
+    (and (developing? card)
+         (= "developer" (:Role member))) (* 2 dice)
+    (and (analysing? card)
+         (= "analyst" (:Role member))) (* 2 dice)
+    :else dice))
 
 (defn work-done [stage]
   (cond
@@ -76,8 +75,8 @@
 ;;
 (defn work-on-card [card]
   (if (:developers card)
-    (let [total (apply + (map #(roll-dice card %) (:developers card)))
-          worked-card (update card (work-done (:stage card)) + total)]
+    (let [total-work (apply + (map #(amount-of-work card % (inc (rand-int 6))) (:developers card)))
+          worked-card (update card (work-done (:stage card)) + total-work)]
       (dissoc
        (if (work-completed? worked-card)
          (update worked-card :stage done-stage)
