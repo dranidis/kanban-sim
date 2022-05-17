@@ -6,8 +6,9 @@
                                            work-on-card work-to-do]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
             [kanban-sim.model.members :refer [developers]]
-            [kanban-sim.model.policies :refer [select-card-with-more-work
-                                               select-random-card-to-work]]
+            [kanban-sim.model.policies :refer [select-card-with-least-work
+                                               select-card-with-least-work-mixed-considering-done select-card-with-more-work
+                                               select-card-with-more-work-considering-done select-random-card-to-work]]
             [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
 
@@ -164,6 +165,24 @@
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
+  (time (->> (map (fn [_] (:revenue (start-sim
+                                     {:select-card-to-work select-card-with-least-work}
+                                     start-day financial developers stories-only))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+  (time (->> (map (fn [_] (:revenue (start-sim
+                                     {:select-card-to-work select-card-with-least-work-mixed-considering-done}
+                                     start-day financial developers stories-only))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+  (time (->> (map (fn [_] (:revenue (start-sim
+                                     {:select-card-to-work select-card-with-more-work-considering-done}
+                                     start-day financial developers stories-only))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+
+
+
   ; -----------------------------
 
   (select-card-with-more-work (first developers) [(first stories-only)])
@@ -197,14 +216,34 @@
 
   (->> stories-only
        log-cards
-       (assign {:select-card-to-work select-card-with-more-work} developers)
+       (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
        log-cards
+       (map work-on-card)
+       log-cards
+       pull-cards
+       log-cards
+
+       (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
+       log-cards
+       (map work-on-card)
+       log-cards
+       pull-cards
+       log-cards
+
+       (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
+       log-cards
+       (map work-on-card)
+       log-cards
+       pull-cards
+       log-cards
+
        ((fn [_] nil)))
 
 
   (pprint/pp)
   ;
   )
+
 
 
 
