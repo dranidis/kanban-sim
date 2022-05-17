@@ -110,7 +110,8 @@
     (= stage "ready") "analysis"
     (= stage "deck") "ready"))
 
-
+(defn cycle-time [card]
+  (- (:DayDeployed card) (:DayReady card)))
 
 (comment
   card
