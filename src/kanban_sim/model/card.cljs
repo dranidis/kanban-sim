@@ -52,11 +52,19 @@
          (= "analyst" (:Role member))) (* 2 dice)
     :else dice))
 
-(defn work-done [stage]
+(defn work-done-keyword [stage]
   (cond
     (= stage "test") :TestDone
     (= stage "development") :DevelopmentDone
-    (= stage "analysis") :AnalysisDone))
+    (= stage "analysis") :AnalysisDone
+    :else (throw (js/Error. (str "Unknown stage: " stage)))))
+
+(defn work-do-keyword [stage]
+  (cond
+    (= stage "test") :Test
+    (= stage "development") :Development
+    (= stage "analysis") :Analysis
+    :else (throw (js/Error. (str "Unknown stage: " stage)))))
 
 (defn done-stage [stage]
   (cond
@@ -90,7 +98,7 @@
 (defn work-on-card [card]
   (if (:developers card)
     (let [total-work (apply + (map #(amount-of-work card % (inc (rand-int 6))) (:developers card)))
-          worked-card (update card (work-done (:stage card)) + total-work)]
+          worked-card (update card (work-done-keyword (:stage card)) + total-work)]
       (dissoc
        (if (work-completed? worked-card)
          (update worked-card :stage done-stage)
@@ -113,7 +121,17 @@
 (defn cycle-time [card]
   (- (:DayDeployed card) (:DayReady card)))
 
+(defn make-card [name stage work]
+  {:Name name
+   :stage stage
+   (work-do-keyword stage) work
+   (work-done-keyword stage) 0})
+
 (comment
+
+  (work-do-keyword "test")
+  (make-card "T1" "test" 10)
+
   card
 
   (if (#{"deck" "ready" "analysis-done" "development-done" "test-done"} "reay") true false)

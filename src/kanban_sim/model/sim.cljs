@@ -4,7 +4,8 @@
             [kanban-sim.model.board :refer [create-columns pull-cards]]
             [kanban-sim.model.card :refer [done? estimate-work-left
                                            work-on-card work-to-do
-                                           cycle-time]]
+                                           cycle-time
+                                           make-card]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
             [kanban-sim.model.members :refer [developers]]
             [kanban-sim.model.policies :refer [select-card-with-least-work
@@ -160,38 +161,45 @@
   ;; statistics
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                     {:select-card-to-work select-random-card-to-work}
-                                     start-day financial developers stories-only)))) (range 100))
+                                                 {:select-card-to-work select-random-card-to-work}
+                                                 start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                     {:select-card-to-work select-card-with-more-work}
-                                     start-day financial developers stories-only)))) (range 100))
+                                                 {:select-card-to-work select-card-with-more-work}
+                                                 start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                     {:select-card-to-work select-card-with-least-work}
-                                     start-day financial developers stories-only)))) (range 100))
+                                                 {:select-card-to-work select-card-with-least-work}
+                                                 start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                     {:select-card-to-work select-card-with-least-work-mixed-considering-done}
-                                     start-day financial developers stories-only)))) (range 100))
-             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max})))
+                                                 {:select-card-to-work select-card-with-least-work-mixed-considering-done}
+                                                 start-day financial developers stories-only)))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                     {:select-card-to-work select-card-with-more-work-considering-done}
-                                     start-day financial developers stories-only)))) (range 100))
+                                                 {:select-card-to-work select-card-with-more-work-considering-done}
+                                                 start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
-        
+
+
+  (map #(str "<" (:DayReady %) "-" (:DayDeployed %) "=" (cycle-time %) ">")
+       (filter (fn [c] (= (:stage c) "deployed"))
+               (:cards (start-sim
+                        {:select-card-to-work select-card-with-more-work-considering-done}
+                        start-day financial developers stories-only))))
 
   (->> (map cycle-time
-       (filter (fn [c] (= (:stage c) "deployed"))(:cards (start-sim
-               {:select-card-to-work select-card-with-more-work-considering-done}
-               start-day financial developers stories-only))))
-            (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max})))
+            (filter (fn [c] (= (:stage c) "deployed"))
+                    (:cards (start-sim
+                             {:select-card-to-work select-card-with-more-work-considering-done}
+                             start-day financial developers stories-only))))
+       (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max})))
 
 
 
@@ -235,6 +243,7 @@
        log-cards
        pull-cards
        log-cards
+       (update-days 6)
 
        (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
        log-cards
@@ -242,6 +251,7 @@
        log-cards
        pull-cards
        log-cards
+       (update-days 7)
 
        (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
        log-cards
@@ -249,18 +259,28 @@
        log-cards
        pull-cards
        log-cards
+       (update-days 8)
 
-       (update-days 20)
+
 
        (map #(:DayDeployed %))
 
       ;;  ((fn [_] nil))
        )
 
+  (def cards [(make-card "T1" "test" 10)
+              (make-card "T2" "test" 8)
+              (make-card "T3" "test" 5)
+              (make-card "D1" "development" 12)])
+  
+  (->> cards
+       log-cards)
+
 
   (pprint/pp)
   ;
   )
+
 
 
 
