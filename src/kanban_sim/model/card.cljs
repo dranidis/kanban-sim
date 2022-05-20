@@ -57,7 +57,8 @@
     (or (= stage "test") (= stage "test-done")) :TestDone
     (or (= stage "development") (= stage "development-done")) :DevelopmentDone
     (or (= stage "analysis") (= stage "analysis-done")) :AnalysisDone
-    :else (throw (js/Error. (str "work-done-keyword: Unknown stage: " stage)))))
+    ;; :else (throw (js/Error. (str "work-done-keyword: Unknown stage: " stage)))
+    ))
 
 (defn work-do-keyword [stage]
   (cond
