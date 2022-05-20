@@ -1,11 +1,10 @@
 (ns kanban-sim.model.sim
   (:require [cljs.pprint :as pprint]
             [clojure.string :as string]
-            [kanban-sim.model.board :refer [create-columns pull-cards]]
-            [kanban-sim.model.card :refer [done? estimate-work-left
-                                           work-on-card work-to-do
-                                           cycle-time
-                                           make-card]]
+            [kanban-sim.model.board :refer [create-columns
+                                            est-development-done pull-cards]]
+            [kanban-sim.model.card :refer [cycle-time done? estimate-work-left
+                                           make-card work-on-card work-to-do]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
             [kanban-sim.model.members :refer [developers]]
             [kanban-sim.model.policies :refer [select-card-with-least-work
@@ -269,12 +268,22 @@
        )
 
   (def cards [(make-card "T1" "test" 10)
-              (make-card "T2" "test" 8)
-              (make-card "T3" "test" 5)
-              (make-card "D1" "development" 12)])
+              (assign-to-card (make-card "T2" "test" 8) {:Role "tester"}) 
+              (assign-to-card (make-card "T3" "test" 5) {:Role "tester"})
+              (make-card "D1" "development-done" 12)
+              (assign-to-card (make-card "D2" "development" 8) {:Role "developer"})
+              (make-card "D3" "development" 10)
+              (make-card "D4" "development" 12)
+              (make-card "D5" "development" 8)
+              ;
+              ])
+  
+  cards
+
   
   (->> cards
-       log-cards)
+       log-cards
+       est-development-done)
 
 
   (pprint/pp)

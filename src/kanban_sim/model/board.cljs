@@ -1,5 +1,5 @@
 (ns kanban-sim.model.board
-  (:require [kanban-sim.model.card :refer [done? next-stage]]
+  (:require [kanban-sim.model.card :refer [done? estimate-work-left next-stage]]
             [kanban-sim.model.cards :refer [filter-stage]]))
 
 
@@ -72,3 +72,11 @@
        pull
        flatten-column-cards))
 
+(defn est-development-done [cards]
+  (count (filter (fn [c]
+                   (or (= (:stage c) "development-done")
+                       (and (= (:stage c) "development")
+                            (<= (:estimated-work-left (estimate-work-left c)) 0))
+                       (and (= (:stage c) "test")
+                            (> (:estimated-work-left (estimate-work-left c)) 0))))
+                 cards)))
