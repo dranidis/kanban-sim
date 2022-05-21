@@ -98,6 +98,11 @@
 
 
 (comment
+  (count all-cards)
+  
+  (count stories-only)
+  wip-limits
+  stories-only
 
   (update-card-day-deployed 5 (assoc (first stories-only) :stage "deployed"))
   (update-card-day-ready 5 (assoc (assoc (first stories-only) :stage "ready") :DayReady 0))
@@ -259,6 +264,8 @@
               (make-card "D5" "development" 8)
               ;
               ])
+  
+  cards
 
   
 

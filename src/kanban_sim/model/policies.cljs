@@ -1,8 +1,9 @@
 (ns kanban-sim.model.policies
-  (:require [kanban-sim.model.board :refer [est-development-done est-analysis-done]]
+  (:require [kanban-sim.model.board :refer [est-analysis-done
+                                            est-development-done]]
             [kanban-sim.model.card :refer [done-stage estimate-work-left]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
-            [kanban-sim.model.members :refer [developers specialty]]
+            [kanban-sim.model.members :refer [developers get-tester specialty]]
             [kanban-sim.model.wip-limits :refer [development-wip-limit
                                                  test-wip-limit]]))
 
@@ -99,7 +100,10 @@
       [[] cards])))
 
 (defn- assign-developer-to-test [policy developers cards]
-  (mock-assign policy developers cards))
+  (let [tester (get-tester developers)]
+    (if tester
+      (mock-assign policy developers cards) ;; todo assign the tester to test card
+      (mock-assign policy developers cards))))
 
 (defn- assign-developer-to-development [policy developers cards]
   (mock-assign policy developers cards))

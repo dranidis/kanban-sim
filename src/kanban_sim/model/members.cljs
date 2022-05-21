@@ -72,11 +72,18 @@
     (= (:Role developer) "developer") "development"
     (= (:Role developer) "analyst") "analysis"))
 
+(defn get-tester [developers]
+  (first (filter #(= (:Role %) "tester") developers)))
+
 (comment
   (filter #(:Active %) members)
   developers
 
   (map specialty developers)
+  (first (filter #(= (:Role %) "tester") developers))
+
+  (get-tester developers)
+  (get-tester [])
 
   (clojure.pprint/pp)
   ;
