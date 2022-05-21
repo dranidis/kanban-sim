@@ -5,38 +5,16 @@
                                             est-development-done pull-cards]]
             [kanban-sim.model.card :refer [cycle-time done? estimate-work-left
                                            make-card work-on-card work-to-do]]
-            [kanban-sim.model.cards :refer [all-cards cards->map]]
+            [kanban-sim.model.cards :refer [all-cards]]
             [kanban-sim.model.members :refer [developers]]
-            [kanban-sim.model.policies :refer [select-card-with-least-work
-                                               select-card-with-least-work-mixed-considering-done select-card-with-more-work
-                                               select-card-with-more-work-considering-done select-random-card-to-work]]
+            [kanban-sim.model.policies :refer [assign assign-developer
+                                               assign-to-card
+                                               select-card-with-least-work select-card-with-least-work-mixed-considering-done
+                                               select-card-with-more-work select-card-with-more-work-considering-done select-random-card-to-work]]
+            [kanban-sim.model.wip-limits :refer [wip-limits]]
             [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
 
-
-
-(defn assign-to-card [card developer]
-  (let [developers (:developers card)]
-    (if developers
-      (update card :developers conj developer)
-      (assoc card :developers [developer]))))
-
-
-
-;;
-(defn assign-developer [policy developer cards]
-  (let [cards-map (cards->map cards)
-        ;; story-id (:StoryId (find-random-card-to-work developer cards))
-        ;; story-id (:StoryId (find-card-with-more-work developer cards))
-        story-id (:StoryId ((:select-card-to-work policy) developer cards))
-        assigned-card (assign-to-card (cards-map story-id) developer)]
-    (into [] (vals (assoc cards-map story-id assigned-card)))))
-
-(defn assign [policy developers cards]
-  (let [[developer & devs] developers]
-    (if developer
-      (assign policy devs (assign-developer policy developer cards))
-      cards)))
 
 (defn update-card-day-ready [day card]
   (if (and (= (:stage card) "ready")
@@ -57,13 +35,13 @@
   (->> cards
        (assign policy developers)
        (map work-on-card)
-       pull-cards
+       (pull-cards (:wip-limits policy))
        (update-days day)))
 
-(defn log-cards [cards]
+(defn log-cards [wip-limits cards]
   (print "LOG")
   (pprint/pprint (->> cards
-                      create-columns
+                      (create-columns wip-limits)
                       (filter #(not= (:label %) :deck))
                       (map #(map
                              (fn [c] [(:Name c) "DO" (work-to-do c)
@@ -116,7 +94,7 @@
 
 (def stories-only (->> all-cards
                        (filter #(string/includes? (:Name %) "S"))
-                       pull-cards))
+                       (pull-cards wip-limits)))
 
 
 (comment
@@ -138,15 +116,9 @@
 
 ;; -----------------
 
-  developers
-
-
-
-  (filter #(= (:Name %) "S1") all-cards)
-
-
-
-  (->> stories-only log-cards)
+  (->> stories-only
+       (log-cards wip-limits)
+       ((fn [_] nil)))
 
   financial
   (start-sim
@@ -156,33 +128,43 @@
   (start-sim
    {:select-card-to-work select-card-with-more-work}
    start-day financial developers stories-only)
+  
+  (start-sim
+   {:wip-policy true
+    :select-card-to-work select-card-with-more-work}
+   start-day financial developers stories-only)
 
   ;; statistics
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                                 {:select-card-to-work select-random-card-to-work}
+                                                 {:select-card-to-work select-random-card-to-work
+                                                  :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                                 {:select-card-to-work select-card-with-more-work}
+                                                 {:select-card-to-work select-card-with-more-work
+                                                  :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                                 {:select-card-to-work select-card-with-least-work}
+                                                 {:select-card-to-work select-card-with-least-work
+                                                  :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                                 {:select-card-to-work select-card-with-least-work-mixed-considering-done}
+                                                 {:select-card-to-work select-card-with-least-work-mixed-considering-done
+                                                  :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
-                                                 {:select-card-to-work select-card-with-more-work-considering-done}
+                                                 {:select-card-to-work select-card-with-more-work-considering-done
+                                                  :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
@@ -210,24 +192,24 @@
 
 
   (->> stories-only
-       log-cards
+       (log-cards wip-limits)
        (select-card-with-more-work (first developers)))
 
   (filter #(= (:stage %) "analysis") stories-only)
 
   (->> stories-only
-       log-cards
+       (log-cards wip-limits)
 
        (develop-cycle {:select-card-to-work select-card-with-more-work} 11 developers)
-       log-cards
+       (log-cards wip-limits)
 
       ;;  (develop-cycle 12 developers)
-      ;;  log-cards
+      ;;  (log-cards wip-limits)
 
       ;;  (develop-cycle 13 developers)
-      ;;  log-cards
+      ;;  (log-cards wip-limits)
 
-       create-columns
+       (create-columns wip-limits)
        (filter #(not= (:label %) :deck))
        (map #(map
               (fn [c] [(:StoryId c) (:stage c) (done? c) (:developers c)])
@@ -235,29 +217,29 @@
 
 
   (->> stories-only
-       log-cards
+       (log-cards wip-limits)
        (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
-       log-cards
+       (log-cards wip-limits)
        (map work-on-card)
-       log-cards
-       pull-cards
-       log-cards
+       (log-cards wip-limits)
+       (pull-cards wip-limits)
+       (log-cards wip-limits)
        (update-days 6)
 
        (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
-       log-cards
+       (log-cards wip-limits)
        (map work-on-card)
-       log-cards
-       pull-cards
-       log-cards
+       (log-cards wip-limits)
+       (pull-cards wip-limits)
+       (log-cards wip-limits)
        (update-days 7)
 
        (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
-       log-cards
+       (log-cards wip-limits)
        (map work-on-card)
-       log-cards
-       pull-cards
-       log-cards
+       (log-cards wip-limits)
+       (pull-cards wip-limits)
+       (log-cards wip-limits)
        (update-days 8)
 
 
@@ -268,7 +250,7 @@
        )
 
   (def cards [(make-card "T1" "test" 10)
-              (assign-to-card (make-card "T2" "test" 8) {:Role "tester"}) 
+              (assign-to-card (make-card "T2" "test" 8) {:Role "tester"})
               (assign-to-card (make-card "T3" "test" 5) {:Role "tester"})
               (make-card "D1" "development-done" 12)
               (assign-to-card (make-card "D2" "development" 8) {:Role "developer"})
@@ -277,13 +259,16 @@
               (make-card "D5" "development" 8)
               ;
               ])
-  
-  cards
 
   
+
+
   (->> cards
-       log-cards
-       est-development-done)
+       (log-cards wip-limits)
+       (develop-cycle {:wip-policy true
+                       :wip-limits wip-limits
+                       :select-card-to-work select-card-with-more-work} 11 developers)
+       )
 
 
   (pprint/pp)

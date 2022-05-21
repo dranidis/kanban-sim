@@ -1,6 +1,9 @@
 (ns kanban-sim.model.board
   (:require [kanban-sim.model.card :refer [done? estimate-work-left next-stage]]
-            [kanban-sim.model.cards :refer [filter-stage]]))
+            [kanban-sim.model.cards :refer [filter-stage]]
+            [kanban-sim.model.wip-limits :refer [analysis-wip-limit
+                                                 development-wip-limit ready-wip-limit
+                                                 test-wip-limit]]))
 
 
 ;;
@@ -47,18 +50,18 @@
       (let [[second-upd first-upd] (pull-from-to second-col first-col)]
         (into [first-upd] (pull (into [second-upd] rest-cols)))))))
 
-(defn create-columns [all-cards]
+(defn create-columns [wip-limits all-cards]
   [{:label :deployed :cards (filter-stage all-cards "deployed")}
    {:label :test :cards
     (into (filter-stage all-cards "test")
-          (filter-stage all-cards "test-done")) :wip 3}
+          (filter-stage all-cards "test-done")) :wip (test-wip-limit wip-limits)}
    {:label :development :cards
     (into (filter-stage all-cards "development")
-          (filter-stage all-cards "development-done")) :wip 5}
+          (filter-stage all-cards "development-done")) :wip (development-wip-limit wip-limits)}
    {:label :analysis :cards
     (into (filter-stage all-cards "analysis")
-          (filter-stage all-cards "analysis-done")) :wip 3}
-   {:label :ready :cards (filter-stage all-cards "ready") :wip 5}
+          (filter-stage all-cards "analysis-done")) :wip (analysis-wip-limit wip-limits)}
+   {:label :ready :cards (filter-stage all-cards "ready") :wip (ready-wip-limit wip-limits)}
    {:label :deck :cards
     (filter-stage all-cards "deck")}])
 
@@ -66,9 +69,9 @@
   (flatten (map :cards columns)))
 
 
-(defn pull-cards [cards]
+(defn pull-cards [wip-limits cards]
   (->> cards
-       create-columns
+       (create-columns wip-limits)
        pull
        flatten-column-cards))
 
@@ -80,3 +83,20 @@
                        (and (= (:stage c) "test")
                             (> (:estimated-work-left (estimate-work-left c)) 0))))
                  cards)))
+
+(defn est-analysis-done [cards]
+  (count (filter (fn [c]
+                   (or (= (:stage c) "analysis-done")
+                       (and (= (:stage c) "analysis")
+                            (<= (:estimated-work-left (estimate-work-left c)) 0))
+                       (and (= (:stage c) "development")
+                            (> (:estimated-work-left (estimate-work-left c)) 0))))
+                 cards)))
+
+(comment
+  (create-columns [5 3 5 3] [])
+
+  (pull-cards [5 3 5 3] [])
+  
+   ;
+  )
