@@ -94,6 +94,7 @@
 
 
 (defn assign-developer-to-test [policy developers cards]
+  ;; (println "To test")
   (let [developer (get-tester developers)
         others (filter #(not= developer %) developers)
         test-cards (filter #(= (:stage %) "test") cards)
@@ -101,6 +102,7 @@
     [others (into rest-cards (assign-developer policy developer test-cards))]))
 
 (defn- assign-developer-to-development [policy developers cards]
+  ;; (println "To dev")
   (let [developer (get-for-development developers)
         others (filter #(not= developer %) developers)
         test-cards (filter #(= (:stage %) "development") cards)
@@ -108,6 +110,7 @@
     [others (into rest-cards (assign-developer policy developer test-cards))]))
 
 (defn assign-developer-to-specialty [policy developers cards]
+  ;; (println "To specialty")
   ;; (println "ASSIGN: " (map :Role developers))
   ;; (println "CARDS: " (map :Name cards))
   (let [developer (first developers)
@@ -126,10 +129,10 @@
   ;; (println "CARDS: " (map :Name cards))
   (if (> (count developers) 0)
     (if (:wip-policy policy)
-      (if (> (est-development-done [cards]) (test-wip-limit (:wip-limits policy)))
+      (if (> (est-development-done cards) (test-wip-limit (:wip-limits policy)))
         (let [[developers' cards'] (assign-developer-to-test policy developers cards)]
           (assign policy developers' cards'))
-        (if (> (est-analysis-done [cards]) (development-wip-limit (:wip-limits policy)))
+        (if (> (est-analysis-done cards) (development-wip-limit (:wip-limits policy)))
           (let [[developers' cards'] (assign-developer-to-development policy developers cards)]
             (assign policy developers' cards'))
           (let [[developers' cards'] (assign-developer-to-specialty policy developers cards)]

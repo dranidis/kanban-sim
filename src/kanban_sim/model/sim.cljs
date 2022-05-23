@@ -2,7 +2,7 @@
   (:require [cljs.pprint :as pprint]
             [clojure.string :as string]
             [kanban-sim.model.board :refer [create-columns
-                                            pull-cards]]
+                                            est-development-done pull-cards]]
             [kanban-sim.model.card :refer [cycle-time done? estimate-work-left
                                            make-card work-on-card work-to-do]]
             [kanban-sim.model.cards :refer [all-cards]]
@@ -11,7 +11,7 @@
                                                assign-to-card
                                                select-card-with-least-work select-card-with-least-work-mixed-considering-done
                                                select-card-with-more-work select-card-with-more-work-considering-done select-random-card-to-work]]
-            [kanban-sim.model.wip-limits :refer [wip-limits]]
+            [kanban-sim.model.wip-limits :refer [test-wip-limit wip-limits]]
             [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
 
@@ -44,9 +44,10 @@
                       (create-columns wip-limits)
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] [(:Name c) "DO" (work-to-do c)
-                                      "EST" (:estimated-work-left (estimate-work-left c))
-                                      (:stage c) (:DayReady c) (:DayDeployed c) (done? c) (:developers c)])
+                             (fn [c] (str (:stage c) ":" (:Name c) ":" 
+                                          (:estimated-work-left (estimate-work-left c)) "/" (work-to-do c)
+                                          ;; (:DayReady c) (:DayDeployed c) (done? c) 
+                                          (map (fn [d] (str (:Role d))) (:developers c))))
                              (:cards %)))))
   (println)
   cards)
@@ -115,8 +116,10 @@
   (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
        (assign-developer {:select-card-to-work select-card-with-more-work} (nth developers 0) all-cards))
 
-  (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
-       (assign {:select-card-to-work select-card-with-more-work} developers all-cards))
+  (filter #(not= (second %) "deck")
+          (map (fn [c] [(:StoryId c) (:stage c) (:developers c)])
+               (assign {:wip-policy true
+                        :select-card-to-work select-card-with-more-work} developers all-cards)))
 
 
 ;; -----------------
@@ -181,6 +184,13 @@
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
   
+    (time (->> (map (fn [_] (:revenue (:financial (start-sim
+                                                   {:select-card-to-work select-card-with-more-work
+                                                    :wip-policy true
+                                                    :wip-limits wip-limits}
+                                                   start-day financial developers stories-only)))) (range 100))
+               (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
 
   (map #(str "<" (:DayReady %) "-" (:DayDeployed %) "=" (cycle-time %) ">")
        (filter (fn [c] (= (:stage c) "deployed"))
@@ -276,33 +286,41 @@
   cards
 
 
-developers
-(def cards-to-assign [(make-card "T1" "test" 10)
-            (make-card "T2" "test" 8)
-            (make-card "T3" "test" 5)
-            (make-card "D1" "development-done" 12)
-            (make-card "D2" "development" 8) 
-            (make-card "D3" "development" 10)
-            (make-card "D4" "development" 12)
-            (make-card "D5" "development" 8)
+  developers
+  (def cards-to-assign [(make-card "T1" "test" 10)
+                        (make-card "T2" "test" 8)
+                        (make-card "T3" "test" 5)
+                        (make-card "D1" "development-done" 12)
+                        (make-card "D2" "development-done" 8)
+                        (make-card "D3" "development" 10)
+                        (make-card "D4" "development" 12)
+                        (make-card "D5" "development" 8)
+                        (make-card "A1" "analysis" 6)
+                        (make-card "A1" "analysis" 7)
               ;
-            ])
+                        ])
+
+  (est-development-done cards-to-assign)
+  (> (est-development-done cards-to-assign) (test-wip-limit (:wip-limits 
+                                                     {:wip-policy true
+                                                      :wip-limits wip-limits
+                                                      :select-card-to-work select-card-with-more-work})))
   
   (->> cards-to-assign
        (log-cards wip-limits)
        (assign {:wip-policy true
-                       :wip-limits wip-limits
-                       :select-card-to-work select-card-with-more-work} developers)
+                :wip-limits wip-limits
+                :select-card-to-work select-card-with-more-work} developers)
        (log-cards wip-limits)
        ((fn [_] nil)))
 
-(->> stories-only
-     (log-cards wip-limits)
-     (assign {:wip-policy true
-              :wip-limits wip-limits
-              :select-card-to-work select-card-with-least-work} developers)
-     (log-cards wip-limits)
-     ((fn [_] nil)))
+  (->> stories-only
+       (log-cards wip-limits)
+       (assign {:wip-policy true
+                :wip-limits wip-limits
+                :select-card-to-work select-card-with-least-work} developers)
+       (log-cards wip-limits)
+       ((fn [_] nil)))
 
 
 

@@ -17,8 +17,8 @@
    (make-card "D3" "development" 10)
    (make-card "D4" "development" 12)
    (make-card "D5" "development" 8)
-;;    (make-card "A1" "analysis" 6)
-;;    (make-card "A1" "analysis" 7)
+   (make-card "A1" "analysis" 6)
+   (make-card "A1" "analysis" 7)
               ;
    ])
 
