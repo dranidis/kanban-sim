@@ -73,7 +73,24 @@
     (= (:Role developer) "analyst") "analysis"))
 
 (defn get-tester [developers]
-  (first (filter #(= (:Role %) "tester") developers)))
+  (let [tester (first (filter #(= (:Role %) "tester") developers))]
+    (if tester
+      tester
+      (let [developer (first (filter #(= (:Role %) "developer") developers))]
+        (if developer
+          developer
+          (first developers))))))
+
+(defn get-for-development [developers]
+  (let [developer (first (filter #(= (:Role %) "developer") developers))]
+    (if developer
+      developer
+      (let [analyst (first (filter #(= (:Role %) "analyst") developers))]
+        (if analyst
+          analyst
+          (first developers))))))
+
+
 
 (comment
   (filter #(:Active %) members)
@@ -83,6 +100,15 @@
   (first (filter #(= (:Role %) "tester") developers))
 
   (get-tester developers)
+  (get-tester (filter #(not= (:Role %) "tester") developers))
+  (get-tester (filter #(and (not= (:Role %) "tester")
+                            (not= (:Role %) "developer")) developers))
+  
+  (def developer (get-tester developers))
+  developers
+  developer
+  (filter #(not= developer %) developers)
+
   (get-tester [])
 
   (clojure.pprint/pp)

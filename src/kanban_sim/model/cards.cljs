@@ -800,7 +800,9 @@
 (def all-cards (js->clj all-cards-js :keywordize-keys true))
 
 (defn cards->map [cards]
-  (reduce #(assoc %1 (:StoryId %2) %2) {} cards))
+  (reduce #(if (:StoryId %2)
+             (assoc %1 (:StoryId %2) %2)
+             (throw (js/Error. (str "cards->map: no StoryId in card: " %2)))) {} cards))
 
 (first all-cards)
 
@@ -816,6 +818,15 @@ indexed-cards
 
 (clojure.pprint/pp)
 
-
+(comment
+  (type all-cards)
+  (def cards all-cards)
+  (type cards)
+  (def test-cards (filter #(= (:stage %) "test") cards))
+  (def rest-cards (filter #(not= (:stage %) "test") cards))
+  (type test-cards)
+  (into (into [] rest-cards) test-cards)
+  ;
+  )
 
 

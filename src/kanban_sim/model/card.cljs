@@ -123,7 +123,8 @@
   (- (:DayDeployed card) (:DayReady card)))
 
 (defn make-card [name stage work]
-  (let [card {:Name name
+  (let [card {:StoryId (random-uuid) 
+              :Name name
               :stage stage
               (work-do-keyword stage) work}]
     (if (done? card)
