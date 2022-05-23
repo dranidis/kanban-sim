@@ -43,7 +43,61 @@
                                  cards-to-assign)]
 
     ;;   (println (map :Name assigned-cards))
-      (is (= (count cards-to-assign) (count assigned-cards))))))
+      (is (= (count cards-to-assign) (count assigned-cards)))))
+
+  (testing "cards are same when wip-policy true"
+    (let [_ (enable-console-print!)
+          assigned-cards (into [] (map #(dissoc % :StoryId)
+                                       (assign {:wip-policy true
+                                                :wip-limits wip-limits
+                                                :select-card-to-work select-card-with-more-work} developers (test-cards))))
+          expected-cards [{:Name "D5", :stage "development", :Development 8, :DevelopmentDone 0}
+                          {:Name "D4",
+                           :stage "development",
+                           :Development 12,
+                           :DevelopmentDone 0,
+                           :developers [{:Active true, :Role "developer", :StoryId nil, :TeamMemberId 6}]}
+                          {:Name "D3", :stage "development", :Development 10, :DevelopmentDone 0}
+                          {:Name "D2", :stage "development", :Development 8, :DevelopmentDone 0}
+                          {:Name "A1",
+                           :stage "analysis",
+                           :Analysis 6,
+                           :AnalysisDone 0,
+                           :developers [{:Active true, :Role "analyst", :StoryId nil, :TeamMemberId 2}]}
+                          {:Name "A1",
+                           :stage "analysis",
+                           :Analysis 7,
+                           :AnalysisDone 0,
+                           :developers [{:Active true, :Role "analyst", :StoryId nil, :TeamMemberId 1}]}
+                          {:Name "T1",
+                           :stage "test",
+                           :Test 10,
+                           :TestDone 0,
+                           :developers
+                           [{:Active true, :Role "tester", :StoryId nil, :TeamMemberId 7}
+                            {:Active true, :Role "developer", :StoryId nil, :TeamMemberId 5}]}
+                          {:Name "T2",
+                           :stage "test",
+                           :Test 8,
+                           :TestDone 0,
+                           :developers [{:Active true, :Role "tester", :StoryId nil, :TeamMemberId 8}]}
+                          {:Name "T3",
+                           :stage "test",
+                           :Test 5,
+                           :TestDone 0,
+                           :developers [{:Active true, :Role "developer", :StoryId nil, :TeamMemberId 4}]}
+                          {:Name "D1", :stage "development-done", :Development 12, :DevelopmentDone 12}]]
+
+      (is (= expected-cards assigned-cards))))
+
+  
+)
+
+(into [] (map #(dissoc % :StoryId)
+              (assign {:wip-policy false
+                       :wip-limits wip-limits
+                       :select-card-to-work select-card-with-more-work} developers (test-cards))))
+
 
 (deftest assign-developer-test
   (testing "number of cards is same"
@@ -83,3 +137,5 @@
                                                                cards-to-assign)]
       (is (= (count cards-to-assign) (count assigned-cards)))
       (is (= (count devs) (dec (count developers)))))))
+
+

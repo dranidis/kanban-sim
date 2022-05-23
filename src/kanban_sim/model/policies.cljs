@@ -129,18 +129,15 @@
   ;; (println "CARDS: " (map :Name cards))
   (if (> (count developers) 0)
     (if (:wip-policy policy)
-      (if (> (est-development-done cards) (test-wip-limit (:wip-limits policy)))
-        (let [[developers' cards'] (assign-developer-to-test policy developers cards)]
-          (assign policy developers' cards'))
-        (if (> (est-analysis-done cards) (development-wip-limit (:wip-limits policy)))
-          (let [[developers' cards'] (assign-developer-to-development policy developers cards)]
-            (assign policy developers' cards'))
-          (let [[developers' cards'] (assign-developer-to-specialty policy developers cards)]
-            (assign policy developers' cards'))))
+      (let [[developers' cards']
+            (if (> (est-development-done cards) (test-wip-limit (:wip-limits policy)))
+              (assign-developer-to-test policy developers cards)
+              (if (> (est-analysis-done cards) (development-wip-limit (:wip-limits policy)))
+                (assign-developer-to-development policy developers cards)
+                (assign-developer-to-specialty policy developers cards)))]
+        (assign policy developers' cards'))
       (let [[developer & devs] developers]
-        (if developer
-          (assign policy devs (assign-developer policy developer cards))
-          cards)))
+        (assign policy devs (assign-developer policy developer cards))))
     cards))
 
 

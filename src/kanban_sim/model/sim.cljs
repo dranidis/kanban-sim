@@ -44,10 +44,10 @@
                       (create-columns wip-limits)
                       (filter #(not= (:label %) :deck))
                       (map #(map
-                             (fn [c] (str (:stage c) ":" (:Name c) ":" 
+                             (fn [c] (str (:stage c) ":" (:Name c) ":"
                                           (:estimated-work-left (estimate-work-left c)) "/" (work-to-do c)
                                           ;; (:DayReady c) (:DayDeployed c) (done? c) 
-                                          (map (fn [d] (str (:Role d))) (:developers c))))
+                                          (apply str (map (fn [d] (str (:Role d) "-")) (:developers c)))))
                              (:cards %)))))
   (println)
   cards)
@@ -184,7 +184,7 @@
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
   
-    (time (->> (map (fn [_] (:revenue (:financial (start-sim
+    (time (println "wip-policy")(->> (map (fn [_] (:revenue (:financial (start-sim
                                                    {:select-card-to-work select-card-with-more-work
                                                     :wip-policy true
                                                     :wip-limits wip-limits}
@@ -306,6 +306,8 @@
                                                       :wip-limits wip-limits
                                                       :select-card-to-work select-card-with-more-work})))
   
+  
+  
   (->> cards-to-assign
        (log-cards wip-limits)
        (assign {:wip-policy true
@@ -320,9 +322,17 @@
                 :wip-limits wip-limits
                 :select-card-to-work select-card-with-least-work} developers)
        (log-cards wip-limits)
+       (map work-on-card)
+       (pull-cards wip-limits)
+       (log-cards wip-limits)
        ((fn [_] nil)))
 
 
+  ;; (->> cards
+  ;;      (assign policy developers)
+  ;;      (map work-on-card)
+  ;;      (pull-cards (:wip-limits policy))
+  ;;      (update-days day))
 
 
   (pprint/pp)
