@@ -9,8 +9,9 @@
             [kanban-sim.model.members :refer [developers]]
             [kanban-sim.model.policies :refer [assign assign-developer
                                                assign-to-card
-                                               select-card-with-least-work select-card-with-least-work-mixed-considering-done
-                                               select-card-with-more-work select-card-with-more-work-considering-done select-random-card-to-work]]
+                                               select-card-matching-developer-effort select-card-with-least-work
+                                               select-card-with-least-work-mixed-considering-done select-card-with-more-work
+                                               select-card-with-more-work-considering-done select-random-card-to-work]]
             [kanban-sim.model.wip-limits :refer [test-wip-limit wip-limits]]
             [kixi.stats.core :refer [mean standard-deviation]]
             [redux.core :refer [fuse]]))
@@ -165,6 +166,12 @@
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
   (time (->> (map (fn [_] (:revenue (:financial (start-sim
+                                                 {:select-card-to-work select-card-matching-developer-effort
+                                                  :wip-limits wip-limits}
+                                                 start-day financial developers stories-only)))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+  (time (->> (map (fn [_] (:revenue (:financial (start-sim
                                                  {:select-card-to-work select-card-with-least-work-mixed-considering-done
                                                   :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
@@ -183,13 +190,20 @@
                                                   :wip-limits wip-limits}
                                                  start-day financial developers stories-only)))) (range 100))
              (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
-  
-    (time (println "wip-policy")(->> (map (fn [_] (:revenue (:financial (start-sim
-                                                   {:select-card-to-work select-card-with-more-work
-                                                    :wip-policy true
-                                                    :wip-limits wip-limits}
-                                                   start-day financial developers stories-only)))) (range 100))
-               (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+  (time (->> (map (fn [_] (:revenue (:financial (start-sim
+                                                 {:select-card-to-work select-card-with-more-work
+                                                  :wip-policy true
+                                                  :wip-limits wip-limits}
+                                                 start-day financial developers stories-only)))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
+
+  (time (->> (map (fn [_] (:revenue (:financial (start-sim
+                                                 {:select-card-to-work select-card-matching-developer-effort
+                                                  :wip-policy true
+                                                  :wip-limits wip-limits}
+                                                 start-day financial developers stories-only)))) (range 100))
+             (transduce identity (fuse {:mean mean :sd standard-deviation :min min :max max}))))
 
 
   (map #(str "<" (:DayReady %) "-" (:DayDeployed %) "=" (cycle-time %) ">")
@@ -301,18 +315,18 @@
                         ])
 
   (est-development-done cards-to-assign)
-  (> (est-development-done cards-to-assign) (test-wip-limit (:wip-limits 
-                                                     {:wip-policy true
-                                                      :wip-limits wip-limits
-                                                      :select-card-to-work select-card-with-more-work})))
-  
-  
-  
+  (> (est-development-done cards-to-assign) (test-wip-limit (:wip-limits
+                                                             {:wip-policy true
+                                                              :wip-limits wip-limits
+                                                              :select-card-to-work select-card-with-more-work})))
+
+
+
   (->> cards-to-assign
        (log-cards wip-limits)
        (assign {:wip-policy true
                 :wip-limits wip-limits
-                :select-card-to-work select-card-with-more-work} developers)
+                :select-card-to-work select-card-matching-developer-effort} developers)
        (log-cards wip-limits)
        ((fn [_] nil)))
 
@@ -320,12 +334,14 @@
        (log-cards wip-limits)
        (assign {:wip-policy true
                 :wip-limits wip-limits
-                :select-card-to-work select-card-with-least-work} developers)
+                :select-card-to-work select-card-matching-developer-effort} developers)
        (log-cards wip-limits)
        (map work-on-card)
        (pull-cards wip-limits)
        (log-cards wip-limits)
        ((fn [_] nil)))
+  
+  
 
 
   ;; (->> cards

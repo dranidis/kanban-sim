@@ -1,10 +1,10 @@
 (ns kanban-sim.policies-test
   (:require [clojure.test :refer [deftest is testing]]
-            [kanban-sim.model.card :refer [make-card]]
+            [kanban-sim.model.card :refer [estimate-work-left make-card]]
             [kanban-sim.model.members :refer [developers]]
             [kanban-sim.model.policies :refer [assign assign-developer
-                                               assign-developer-to-specialty
-                                               assign-developer-to-test select-card-with-more-work]]
+                                               assign-developer-to-test
+                                               assign-to-card select-card-matching-developer-effort select-card-with-more-work]]
             [kanban-sim.model.wip-limits :refer [wip-limits]]))
 
 
@@ -88,10 +88,7 @@
                            :developers [{:Active true, :Role "developer", :StoryId nil, :TeamMemberId 4}]}
                           {:Name "D1", :stage "development-done", :Development 12, :DevelopmentDone 12}]]
 
-      (is (= expected-cards assigned-cards))))
-
-  
-)
+      (is (= expected-cards assigned-cards)))))
 
 (into [] (map #(dissoc % :StoryId)
               (assign {:wip-policy false
@@ -125,17 +122,34 @@
       (is (= (count cards-to-assign) (count assigned-cards)))
       (is (= (count devs) (dec (count developers)))))))
 
-(deftest assign-developer-to-specialty-test
-  (testing "number of cards is same"
-    (let [_ (enable-console-print!)
-          _ (println "TEST")
-          cards-to-assign (test-cards)
-          [devs assigned-cards] (assign-developer-to-specialty {:wip-policy true
-                                                                :wip-limits wip-limits
-                                                                :select-card-to-work select-card-with-more-work}
-                                                               developers
-                                                               cards-to-assign)]
-      (is (= (count cards-to-assign) (count assigned-cards)))
-      (is (= (count devs) (dec (count developers)))))))
+(deftest select-card-matching-developer-effort-test
+  (testing "exact work"
+    (let [card (select-card-matching-developer-effort {:Role "tester"}
+                                                      [(make-card "T1" "test" 7)
+                                                       (make-card "T2" "test" 8)
+                                                       (make-card "T3" "test" 6)])]
+      (is (= "T1" (:Name card)))))
+  
+  (testing "a bit more"
+    (let [card (select-card-matching-developer-effort {:Role "tester"}
+                                                      [(make-card "T1" "test" 10)
+                                                       (make-card "T2" "test" 8)
+                                                       (make-card "T3" "test" 6)])]
+      (is (= "T3" (:Name card)))))
+  
+  (testing "too much"
+    (let [card (select-card-matching-developer-effort {:Role "developer"}
+                                                      [(make-card "T1" "test" 15)
+                                                       (make-card "T2" "test" 8)
+                                                       (assign-to-card (make-card "T3" "test" 6) {:Role "tester"})])]
+      (is (= "T2" (:Name card))))))
 
+(comment
+  developers
+  (def cards [(make-card "T1" "test" 15)
+              (make-card "T2" "test" 8)
+              (assign-to-card (make-card "T3" "test" 6) {:Role "tester"})])
+  (filter #(> (:estimated-work-left %) 0)
+          (map estimate-work-left cards))
+  )
 

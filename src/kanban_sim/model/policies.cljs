@@ -1,11 +1,15 @@
 (ns kanban-sim.model.policies
-  (:require [kanban-sim.model.board :refer [est-analysis-done
-                                            est-development-done]]
-            [kanban-sim.model.card :refer [done-stage estimate-work-left]]
+  (:require [clojure.string :as string]
+            [kanban-sim.model.board :refer [est-analysis-done
+                                            est-development-done pull-cards]]
+            [kanban-sim.model.card :refer [done-stage estimate-work-left
+                                           make-card]]
             [kanban-sim.model.cards :refer [all-cards cards->map]]
-            [kanban-sim.model.members :refer [developers get-tester get-for-development specialty]]
+            [kanban-sim.model.members :refer [developers get-for-development
+                                              get-tester specialty]]
             [kanban-sim.model.wip-limits :refer [development-wip-limit
-                                                 test-wip-limit]]))
+                                                 test-wip-limit wip-limits]]
+            [kixi.stats.math :refer [abs]]))
 
 (defn specialty-cards [developer cards]
   (filter #(= (:stage %) (specialty developer)) cards))
@@ -78,11 +82,54 @@
                   (map estimate-work-left (select-cards-according-to-specialty-and-done developer cards))))))
 
 
+
+
 (defn assign-to-card [card developer]
   (let [developers (:developers card)]
     (if developers
       (update card :developers conj developer)
       (assoc card :developers [developer]))))
+
+(defn select-card-matching-developer-effort [developer cards]
+  (first (sort
+          (fn [c1 c2] (or (< (abs (:estimated-work-left c1))
+                             (abs (:estimated-work-left c2)))
+                          (and (= (abs (:estimated-work-left c1))
+                                  (abs (:estimated-work-left c2)))
+                               (< (:estimated-work-left c1) (:estimated-work-left c2)))))
+          (map #(estimate-work-left (assign-to-card % developer))
+               (select-cards-according-to-specialty developer 
+                                                    (filter #(> (:estimated-work-left %) 0) 
+                                                            (map estimate-work-left cards)))))))
+
+(comment
+  
+  (def stories-only (->> all-cards
+                         (filter #(string/includes? (:Name %) "S"))
+                         (pull-cards wip-limits)))
+  
+  (def developer {:Role "tester"})
+
+  (def cards [(make-card "T1" "test" 6)
+              (make-card "T2" "test" 10)
+              (make-card "T3" "test" 8)])
+  
+  (def cards (filter #(not= (:stage %) 
+                          "deck") stories-only))
+  (count cards)
+
+(map :estimated-work-left (map #(estimate-work-left (assign-to-card % developer))
+     (select-cards-according-to-specialty developer cards)))
+  
+  (first (sort
+          (fn [c1 c2] (or (< (abs (:estimated-work-left c1))
+                             (abs (:estimated-work-left c2)))
+                          (and (= (abs (:estimated-work-left c1))
+                                  (abs (:estimated-work-left c2)))
+                               (< (:estimated-work-left c1) (:estimated-work-left c2)))))
+          (map #(estimate-work-left (assign-to-card % developer)) cards)))
+  ;
+  )
 
 (defn assign-developer [policy developer cards]
   (let [cards-map (cards->map cards)
