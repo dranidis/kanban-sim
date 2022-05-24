@@ -254,6 +254,13 @@
 
 
   (->> stories-only
+       (develop-cycle {:wip-policy true :select-card-to-work select-card-matching-developer-effort} 11 developers)
+       (map (fn [c]
+              [(if (> (:TestDone c) 0) (- (:Test c) (:TestDone c)) nil)
+               (if (> (:DevelopmentDone c) 0) (- (:Development c) (:DevelopmentDone c)) nil)
+               (if (> (:AnalysisDone c) 0) (- (:Analysis c) (:AnalysisDone c)) nil)])))
+  
+  (->> stories-only
        (log-cards wip-limits)
        (assign {:select-card-to-work select-card-with-least-work-mixed-considering-done} developers)
        (log-cards wip-limits)
